@@ -10,6 +10,11 @@ docker build -t splitting .
 docker run --rm --gpus all splitting
 ```
 
+## 사용한 테스트 데이터
+- ImageNet 데이터가 겁나 커서 순순히 다운받기 너무 싫었음...
+- 거의 100GB 된다던데?
+- 누군가 1000개 클래스마다 이미지 하나씩 골라놓은 repo가 있길래 그걸 다운받아 썼습니다
+
 ## 지금까지 든 생각
 이 모델을 어떻게 나눌지는 resnet.py의 _forward_impl 함수를 보며 고민해봅시다...
 
