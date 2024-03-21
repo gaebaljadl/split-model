@@ -27,12 +27,6 @@ if __name__ == "__main__":
     num_tested = 0
     num_correct = 0
     for image, label in dataloader:
-        # Ignore grayscale images to avoid input dimension mismatch error.
-        # Note: dimension 0 is the batch dimension, so the RGB channel comes at dimension 1.
-        # TODO: fix the model or whatsoever so that the model can also handle grayscale input [1, 1, ?, ?].
-        # if image.size()[1] != 3:
-        # continue
-
         # Forward pass.
         pred = model(image.to(device))
 
