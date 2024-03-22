@@ -1,7 +1,42 @@
 import sample_data
 import torch
 from torch.utils.data import DataLoader
-from torchvision.models import resnet50, ResNet50_Weights
+from torchvision.models import ResNet, resnet50, ResNet50_Weights
+
+class ResNetOutputLayer(torch.nn.Module):
+    def __init__(self, avgpool, fc):
+        super().__init__()
+
+        self.avgpool = avgpool
+        self.fc = fc
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+
+        return x
+
+
+def split_resnet(resnet_model: ResNet):
+    # TODO: split model into two parts
+    # plan:
+    # 1. manually construct a list of layers from resnet model
+    # 2. specify the layer to split (ex. index)
+    # 3. run both models and check if the result is same (no accuracy loss)
+    layers = []
+    layers.append(resnet_model.conv1)
+    layers.append(resnet_model.bn1)
+    layers.append(resnet_model.relu)
+    layers.append(resnet_model.maxpool)
+
+    layers.append(resnet_model.layer1)
+    layers.append(resnet_model.layer2)
+    layers.append(resnet_model.layer3)
+    layers.append(resnet_model.layer4)
+    
+    layers.append(ResNetOutputLayer(resnet_model.avgpool, resnet_model.fc))
+    return layers
 
 
 if __name__ == "__main__":
@@ -22,16 +57,28 @@ if __name__ == "__main__":
     # Turn off dropout and batch normalization
     model.eval()
 
+    # Get all sequential layers
+    sequential_layers = split_resnet(model)
+
     # Test accuracy.
     print("testing the model with one sample for each class...")
     num_tested = 0
     num_correct = 0
     for image, label in dataloader:
+        print(label)
         # Forward pass.
         pred = model(image.to(device))
 
+        split_pred = image.to(device)
+        for i in range(len(sequential_layers)):
+            split_pred = sequential_layers[i](split_pred)
+
         # Get the class index of prediction with highest probability.
         max_prob_class = torch.argmax(pred)
+        split_max_prob_class = torch.argmax(split_pred)
+        if max_prob_class.item() != split_max_prob_class.item():
+            print("ERROR")
+            break
 
         # Check if the output with highest probability is equal to groundtruth.
         # Note: class_name can contain multiple aliases (ex. "dog, doge")

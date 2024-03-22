@@ -15,8 +15,31 @@ docker run --rm --gpus all splitting
 - 거의 100GB 된다던데?
 - 누군가 1000개 클래스마다 이미지 하나씩 골라놓은 repo가 있길래 그걸 다운받아 썼습니다
 
+## 현재 상황
+- 아래에 있는 _forward_imple 함수를 그대로 복사한 듯한 코드로 같은 class label이 결과로 나오는걸 확인했음
+- layer1, layer2처럼 큰 nn.sequential도 쪼개서 layer 목록에 넣는게 다음 목표
+
 ## 지금까지 든 생각
 이 모델을 어떻게 나눌지는 resnet.py의 _forward_impl 함수를 보며 고민해봅시다...
+```python
+def _forward_impl(self, x: Tensor) -> Tensor:
+   # See note [TorchScript super()]
+   x = self.conv1(x)
+   x = self.bn1(x)
+   x = self.relu(x)
+   x = self.maxpool(x)
+
+   x = self.layer1(x)
+   x = self.layer2(x)
+   x = self.layer3(x)
+   x = self.layer4(x)
+
+   x = self.avgpool(x)
+   x = torch.flatten(x, 1)
+   x = self.fc(x)
+
+   return x
+```
 
 ### resnet 모델
 - resnet18은 너무 작아서 그런지 정확도가 50% 정도밖에 안 나왔음
@@ -37,6 +60,8 @@ docker run --rm --gpus all splitting
 ### 앞으로 알아봐야 할 정보
 1. modules()말고 제대로된 layer 배치?를 얻어낼 방법이 혹시나 존재하는지?
    - 예를 들어, 우리가 수동으로 nn.sequential을 풀어서 layer 배열을 만든다던가?
-   - 보니까 residual connection이 포함된 bottlenet이라 부르는 블록이 있는데,  
+   - 보니까 residual connection이 포함된 bottleneck이라 부르는 블록이 있는데,  
    이걸 분할 가능한 최소 단위로 삼아서 layer list를 만들 수 있을 것 같음
 2. pytorch tensor를 네트워크 상에서 어떻게 전달할 것인지? (인코딩 디코딩 요런거)
+3. layer 목록 가져와서 한 단계씩 넣어보는걸 했는데 뭔가 메모리 누수가 일어나는 것 같음.   
+어떻게 확인할진 모르겠음.
