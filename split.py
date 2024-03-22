@@ -4,6 +4,14 @@ from torch.utils.data import DataLoader
 from torchvision.models import ResNet, resnet50, ResNet50_Weights
 
 class ResNetOutputLayer(torch.nn.Module):
+    """
+    Encapsulates the last part of a ResNet model
+    where it uses torch.flatten() function in the middle.
+
+    Since we want to split the whole model into layers,
+    the flatten-part had to be grouped into this custom module.
+    """
+
     def __init__(self, avgpool, fc):
         super().__init__()
 
@@ -18,24 +26,33 @@ class ResNetOutputLayer(torch.nn.Module):
         return x
 
 
-def split_resnet(resnet_model: ResNet):
-    # TODO: split model into two parts
-    # plan:
-    # 1. manually construct a list of layers from resnet model
-    # 2. specify the layer to split (ex. index)
-    # 3. run both models and check if the result is same (no accuracy loss)
+def split_resnet(resnet_model: ResNet) -> torch.nn.ModuleList:
+    """
+    Convert ResNet model into torch.nn.ModuleList
+    so that we can sequentially compute each layer.
+    """
     layers = torch.nn.ModuleList()
+
     layers.append(resnet_model.conv1)
     layers.append(resnet_model.bn1)
     layers.append(resnet_model.relu)
     layers.append(resnet_model.maxpool)
 
-    layers.append(resnet_model.layer1)
-    layers.append(resnet_model.layer2)
-    layers.append(resnet_model.layer3)
-    layers.append(resnet_model.layer4)
+    # These layers are nn.Sequential, so we should iterate over them.
+    for layer in resnet_model.layer1:
+        layers.append(layer)
+    for layer in resnet_model.layer2:
+        layers.append(layer)
+    for layer in resnet_model.layer3:
+        layers.append(layer)
+    for layer in resnet_model.layer4:
+        layers.append(layer)
     
+    # Output layer utilizes torch.flatten(),
+    # so it was inevitable to encapsulate
+    # the last layers into a custom module.
     layers.append(ResNetOutputLayer(resnet_model.avgpool, resnet_model.fc))
+
     return layers
 
 
@@ -49,22 +66,26 @@ if __name__ == "__main__":
     dataset = sample_data.TestDataset()
     dataloader = DataLoader(dataset, batch_size=1)
 
-    # Load pretrained model
+    # Load pretrained model.
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = resnet50(weights = ResNet50_Weights.DEFAULT).to(device)
-    print(model)
 
-    # Turn off dropout and batch normalization
+    # Turn off dropout and batch normalization.
     model.eval()
 
-    # Get all sequential layers
+    # Convert given resnet model into list of layers.
     sequential_layers = split_resnet(model)
 
+    # Print split result.
+    print("----- split result -----")
+    print("# layers:", len(sequential_layers))
+    for i in range(len(sequential_layers)):
+        print("layer", i, sequential_layers[i])
+
     # Test accuracy.
-    print("testing the model with one sample for each class...")
+    print("----- testing the model with one sample for each class -----")
     num_tested = 0
     num_correct = 0
-    
     with torch.no_grad():
         for image, label in dataloader:
             # Forward pass.
