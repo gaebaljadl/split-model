@@ -21,6 +21,7 @@ docker run --rm --gpus all splitting
 ### resnet 모델
 - resnet18은 너무 작아서 그런지 정확도가 50% 정도밖에 안 나왔음
 - resnet50으로 바꾸니 80% 이상!
+- [resnet 모델 구조 설명하는 블로그 글](https://jisuhan.tistory.com/71)
 
 ### 일을 어렵게 만드는 요소
 1. forward 함수에서 뭔 짓을 하던 결과만 잘 나오면 pytorch는 좋아함.  
@@ -35,5 +36,7 @@ docker run --rm --gpus all splitting
 
 ### 앞으로 알아봐야 할 정보
 1. modules()말고 제대로된 layer 배치?를 얻어낼 방법이 혹시나 존재하는지?
-    - 예를 들어, 우리가 수동으로 nn.sequential을 풀어서 layer 배열을 만든다던가?
+   - 예를 들어, 우리가 수동으로 nn.sequential을 풀어서 layer 배열을 만든다던가?
+   - 보니까 residual connection이 포함된 bottlenet이라 부르는 블록이 있는데,  
+   이걸 분할 가능한 최소 단위로 삼아서 layer list를 만들 수 있을 것 같음
 2. pytorch tensor를 네트워크 상에서 어떻게 전달할 것인지? (인코딩 디코딩 요런거)
