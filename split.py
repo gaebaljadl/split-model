@@ -24,7 +24,7 @@ def split_resnet(resnet_model: ResNet):
     # 1. manually construct a list of layers from resnet model
     # 2. specify the layer to split (ex. index)
     # 3. run both models and check if the result is same (no accuracy loss)
-    layers = []
+    layers = torch.nn.ModuleList()
     layers.append(resnet_model.conv1)
     layers.append(resnet_model.bn1)
     layers.append(resnet_model.relu)
@@ -64,33 +64,34 @@ if __name__ == "__main__":
     print("testing the model with one sample for each class...")
     num_tested = 0
     num_correct = 0
-    for image, label in dataloader:
-        print(label)
-        # Forward pass.
-        pred = model(image.to(device))
+    
+    with torch.no_grad():
+        for image, label in dataloader:
+            # Forward pass.
+            pred = model(image.to(device))
 
-        split_pred = image.to(device)
-        for i in range(len(sequential_layers)):
-            split_pred = sequential_layers[i](split_pred)
+            split_pred = image.to(device)
+            for i in range(len(sequential_layers)):
+                split_pred = sequential_layers[i](split_pred)
 
-        # Get the class index of prediction with highest probability.
-        max_prob_class = torch.argmax(pred)
-        split_max_prob_class = torch.argmax(split_pred)
-        if max_prob_class.item() != split_max_prob_class.item():
-            print("ERROR")
-            break
+            # Get the class index of prediction with highest probability.
+            max_prob_class = torch.argmax(pred)
+            split_max_prob_class = torch.argmax(split_pred)
 
-        # Check if the output with highest probability is equal to groundtruth.
-        # Note: class_name can contain multiple aliases (ex. "dog, doge")
-        #       so we must compare label with 'in' operator (ex. "dog" in "dog, doge")
-        # Note: the index 0 is for batch dimension, which has size of 1.
-        class_name = class_name_dict[max_prob_class.item()]
-        is_correct = label[0] in class_name
+            # Two predictions must be identical if we did the job correctly.
+            assert(max_prob_class.item() == split_max_prob_class.item())
 
-        # Record accuracy.
-        num_tested += 1
-        if is_correct:
-            num_correct += 1
+            # Check if the output with highest probability is equal to groundtruth.
+            # Note: class_name can contain multiple aliases (ex. "dog, doge")
+            #       so we must compare label with 'in' operator (ex. "dog" in "dog, doge")
+            # Note: the index 0 is for batch dimension, which has size of 1.
+            class_name = class_name_dict[max_prob_class.item()]
+            is_correct = label[0] in class_name
+
+            # Record accuracy.
+            num_tested += 1
+            if is_correct:
+                num_correct += 1
     
     # Print final accuracy.
     print("correct predictions: {}/{}".format(num_correct, num_tested))
