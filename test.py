@@ -1,36 +1,42 @@
-import splitter
-import sample_data
+from splitter import *
+from sample_data import *
 import torch
 from torch.utils.data import DataLoader
 
 if __name__ == "__main__":
     # Prepare a dict which will help us convert class index into a readable class name.
-    class_name_dict = sample_data.load_class_index_to_name_dict()
+    class_name_dict = load_class_index_to_name_dict()
 
     # Load the test data.
     # The provided input images do not have uniform size,
     # so we cannot use batch_size > 1.
-    dataset = sample_data.TestDataset()
+    dataset = TestDataset()
     dataloader = DataLoader(dataset, batch_size=1)
 
     # Load pretrained model.
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = splitter.load_pretrained_resnet().to(device)
-
-    # Turn off dropout and batch normalization.
-    model.eval()
+    model = load_pretrained_resnet().to(device)
 
     # Convert given resnet model into list of layers,
     # then split them in half to construct head/tail models.
-    module_list = splitter.convert_to_module_list(model)
-    split_layer_index = len(module_list) // 2
-    head, tail = splitter.split_module_list(module_list, split_layer_index)
+    # module_list = splitter.convert_to_module_list(model)
+    # split_layer_index = len(module_list) // 2
+    # head, tail = splitter.split_module_list(module_list, split_layer_index)
+
+    # Load splitted models
+    head = torch.load("./head.pth").to(device)
+    tail = torch.load("./tail.pth").to(device)
+
+    # Turn off dropout and batch normalization.
+    model.eval()
+    head.eval()
+    tail.eval()
 
     # Print split result.
-    print("----- split result -----")
-    print("# layers:", len(module_list))
-    for i in range(len(module_list)):
-        print("layer", i, module_list[i])
+    # print("----- split result -----")
+    # print("# layers:", len(module_list))
+    # for i in range(len(module_list)):
+    #     print("layer", i, module_list[i])
     print("----- head part -----")
     print(head)
     print("----- tail part -----")

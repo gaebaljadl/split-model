@@ -75,4 +75,12 @@ def split_module_list(module_list: list[torch.nn.Module], split_layer_index: int
 if __name__ == "__main__":
     # This section will be executed while building docker image
     # so that we can skip downloading pretrained weights everytime.
-    load_pretrained_resnet()
+    model = load_pretrained_resnet()
+
+    # Split the model into head/tail and save them.
+    module_list = convert_to_module_list(model)
+    split_layer_index = len(module_list) // 2
+    head, tail = split_module_list(module_list, split_layer_index)
+
+    torch.save(head, "./head.pth")
+    torch.save(tail, "./tail.pth")
