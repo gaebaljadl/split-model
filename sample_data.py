@@ -1,7 +1,8 @@
 import PIL
 import os
 import ast
-from torchvision.transforms import ToTensor
+import torch
+import torchvision.transforms as transforms
 from torch.utils.data import Dataset
 
 
@@ -28,14 +29,23 @@ class TestDataset(Dataset):
         self.labels = [parse_label(name) for name in self.file_names]
 
         # Load images using PIL
-        to_tensor = ToTensor()
-        self.images = [to_tensor(PIL.Image.open("{}/{}".format(directory, name))) for name in self.file_names]
+        preprocess = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor()
+        ])
+        self.images = [preprocess(PIL.Image.open("{}/{}".format(directory, name))) for name in self.file_names]
 
-        # Convert grayscale to RGB by duplicating color value 3 times
+        # Convert grayscale to RGB by duplicating color
+        # value 3 times, and then normalize the image.
+        # Note: transforms.Normalize didn't work on grayscale images,
+        #       so I had to separate this step from 'preprocess'.
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         for i in range(len(self.images)):
             is_grayscale = self.images[i].size()[0] == 1
             if is_grayscale:
                 self.images[i] = self.images[i].repeat(3, 1, 1)
+            self.images[i] = normalize(self.images[i])
 
 
     def __len__(self):
