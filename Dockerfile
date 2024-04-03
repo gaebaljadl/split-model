@@ -1,5 +1,3 @@
-# vanilla pytorch 컨테이너 실행 명령: docker run -dt --rm --gpus all pytorch/pytorch
-
 FROM pytorch/pytorch
 
 RUN apt-get update && apt-get install -y git
@@ -12,12 +10,18 @@ RUN mkdir /test; cd /test;\
 
 COPY ./splitter.py /test/splitter.py
 COPY ./sample_data.py /test/sample_data.py
+COPY ./test.py /test/test.py
+COPY ./app.py /test/app.py
 
 # 모델 로딩하는 코드만 먼저 돌려서 이미지 빌드할 때 pretrained weight 다운받아놓기
 RUN cd /test; python splitter.py
 
-COPY ./test.py /test/test.py
+# pytorch 이미지에 Flask는 없으니 설치
+RUN pip install Flask
 
 WORKDIR /test
 
-CMD ["python", "test.py"]
+# app.py에서 8080포트로 웹서버 실행할 예정
+EXPOSE 8080
+
+CMD ["python", "app.py"]

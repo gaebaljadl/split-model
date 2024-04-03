@@ -2,20 +2,21 @@
 - pytorch로 resnet50 모델을 여러 파트로 나누고 실행해보기
 - 분할했을 때 원본과 동일한 결과를 내는 것 확인하기
 
-## 실행
+## 로컬에서 실행
 ```
-// 이미지 빌드 및 컨테이너 실행 (gpu 사용)
+// 이미지 빌드 및 컨테이너 실행 (gpu 사용, 포트는 어디로 매핑될지 모름...)
 // pytorch 이미지가 거의 7GB라 첫 빌드는 오래걸림
 docker build -t splitting .
-docker run --rm --gpus all splitting
+docker run -P --rm --gpus all splitting
 
-// vscode 등으로 백그라운드 컨테이너에 접근하고 싶은 경우
-docker run -dt --rm --gpus all splitting bash
+// docker desktop 등으로 어느 포트가 8080으로 매핑되었는지 확인하고 요청 보내기
+// ex) 호스트 32768 => 컨테이너 8080이면 http://localhost:32768/predict로 요청
+curl -X POST -F "file=@파일경로.jpg" http://localhost:포트번호/predict
 ```
 
 ## 참고사항
 - GPU 없는 환경에서도 돌아갈 것 같긴 한데 아직 확인은 못해봤음
-- 테스트한 환경: Window11 + WSL2 + Docker
+- 테스트한 환경: Windows11 + WSL2 + Docker
 
 ## 동작 과정
 1. 이미지를 빌드할 때 splitter.py를 실행해서 pretrained resnet 모델을 다운받고  
@@ -37,7 +38,7 @@ docker run -dt --rm --gpus all splitting bash
 
 ## resnet 모델
 - resnet18은 너무 작아서 그런지 정확도가 50% 정도밖에 안 나왔음
-- resnet50으로 바꾸니 80% 이상!
+- resnet50으로 바꾸니 90% 이상!
 - [resnet 모델 구조 설명하는 블로그 글](https://jisuhan.tistory.com/71)
 
 ## 그래서 모델은 어떻게 나눈건데?
