@@ -1,6 +1,8 @@
 # 목표
 - pytorch로 resnet50 모델을 여러 파트로 나누고 실행해보기
 - 분할했을 때 원본과 동일한 결과를 내는 것 확인하기
+- 웹서버로 감싸 레이어 범위 및 다음 파트 담당하는 서버 ip주소 지정하기
+- 여러 서버로 분할된 환경에서 inference 잘 진행되는지 확인하기
 
 ## 로컬에서 실행
 ```
@@ -9,9 +11,14 @@
 docker build -t splitting .
 docker run -P --rm --gpus all splitting
 
+// 모델의 레이어 범위 및 다음 서버 주소 지정.
+// 마지막 파트에는 "nextaddr=None" 넘겨주기.
+curl -G -d "start=0" -d "end=10" -d "nextaddr=host.docker.internal:5555" GET http://localhost:32769/configure
+
 // docker desktop 등으로 어느 포트가 8080으로 매핑되었는지 확인하고 요청 보내기
 // ex) 호스트 32768 => 컨테이너 8080이면 http://localhost:32768/predict로 요청
 curl -X POST -F "file=@파일경로.jpg" http://localhost:포트번호/predict
+
 ```
 
 ## 참고사항
@@ -94,3 +101,6 @@ list 순회하듯이 iterate => 배열에 추가.
 
       return layers
    ```
+
+## torch.Tensor 전송하기 (인코딩, 디코딩)
+- [참고자료](https://stackoverflow.com/questions/70174676/how-to-send-an-numpy-array-or-a-pytorch-tensor-through-http-post-request-using-r)
