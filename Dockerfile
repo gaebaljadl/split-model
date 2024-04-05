@@ -2,6 +2,9 @@ FROM pytorch/pytorch
 
 RUN apt-get update && apt-get install -y git
 
+# pytorch 이미지에 Flask는 없으니 설치
+RUN pip install Flask
+
 RUN mkdir /test; cd /test;\
     # 클래스마다 이미지 한 장씩 선정한 repo
     git clone https://github.com/EliSchwartz/imagenet-sample-images.git;\
@@ -10,14 +13,13 @@ RUN mkdir /test; cd /test;\
 
 COPY ./splitter.py /test/splitter.py
 COPY ./sample_data.py /test/sample_data.py
-COPY ./test.py /test/test.py
-COPY ./app.py /test/app.py
 
 # 모델 로딩하는 코드만 먼저 돌려서 이미지 빌드할 때 pretrained weight 다운받아놓기
 RUN cd /test; python splitter.py
 
-# pytorch 이미지에 Flask는 없으니 설치
-RUN pip install Flask
+# 여기는 수정이 자주 일어나니 나중에 복사
+COPY ./test.py /test/test.py
+COPY ./app.py /test/app.py
 
 WORKDIR /test
 

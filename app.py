@@ -5,6 +5,7 @@ from PIL import Image
 import io
 import requests
 import numpy as np
+import json
 from splitter import *
 
 app = Flask(__name__)
@@ -25,15 +26,14 @@ next_model_addr = 'None'
 # 첫 레이어를 담당하는 경우 요청을 유저가 보냄.
 # 이미지 파일이 들어오니까 전처리(preprocess_image) 필요.
 # False인 경우는 바로 전 파트의 output tensor가
-# numpy array 형태로 오니까 to_tensor만 적용해주면 됨.
+# numpy array 형태로 오니까 torch.from_numpy() 적용해주면 됨.
 is_request_from_client = True
 
 # 이미지 전처리를 위한 변환 정의
-to_tensor = transforms.ToTensor()
 preprocess_image = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
-    to_tensor,
+    transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
@@ -63,27 +63,25 @@ def configure():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    # 입력 이미지 받기.
-    # 클라이언트가 보낸 요청인 경우는 진짜 이미지 파일이고,
-    # 일부분만 담당하는 파트에서 보내온 '나머지 연산' 요청인 경우는 numpy array임.
-    file = request.files['file']
-
     if is_request_from_client:
         # 변환 과정: 바이트 배열 -> 이미지 파일 -> 전처리 -> torch.Tensor
+        file = request.files['file']
         image = Image.open(io.BytesIO(file.read()))
         input = preprocess_image(image).unsqueeze(0).to(device)
-        print('request from client')
     else:
         # 변환 과정: 바이트 배열 -> numpy array -> shape 조정 -> torch.Tensor
-        shape = request.json['shape']
-        print('request from previous split model with shape: {}'.format(shape))
-        # shape = [1, 512, 28, 28]
-        numpy_array = np.frombuffer(file.read(), dtype=float)
-        np.reshape(numpy_array, shape)
-        input = to_tensor(numpy_array).to(device)
+        print('start reading output tensor from previous pod...', flush=True)
+        shape_json_bytes = request.files['shape_json']
+        shape = json.loads(shape_json_bytes.read())['shape']
+        print('request from previous split model with shape: {}'.format(shape), flush=True)
 
-    # 예측 생성
-    output = predict_image(input)
+        output_bytes = request.files['output_bytes']
+        numpy_array = np.frombuffer(output_bytes.read(), dtype=np.float32)
+        numpy_array = np.reshape(numpy_array, shape)
+        input = torch.from_numpy(numpy_array).to(device)
+
+    # 예측 생성 (GPU 연산 가능성도 있으니 cpu 메모리로 이동)
+    output = predict_image(input).to('cpu')
 
     # Case 1) 이번 파트가 최종 출력을 계산했음
     if next_model_addr == 'None':
@@ -100,14 +98,29 @@ def predict():
         # torch.Tensor를 바이트로 변환하기.
         # 차원 구분이 없는 바이트 배열로 보내다보니
         # 받는 쪽에서 복원할 때 shape 정보 필요함!
-        # 변환 과정: gpu tensor -> cpu tensor -> numpy array -> byte array
-        output_shape = output.shape
-        output_bytes = output.to('cpu').numpy().tobytes()
-        byte_stream = io.BytesIO(output_bytes)
+        # 변환 과정: tensor -> numpy array -> byte array
+        # 참고: numpy()로 변환하면 타입이 np.float32임
+        #       np.frombuffer()는 디폴트 타입이 np.float64라서 반드시 타입을 명시해야 함!!!
+        output_shape = list(output.shape)
+        output_bytes = output.numpy().tobytes()
 
-        # 다음 파트를 담당하는 pod에 나머지 연산 요청
-        print('forwarding request to {} with intermediate output shape: {}...'.format(next_model_addr, output_shape))
-        res = requests.post('http://{}/predict'.format(next_model_addr), json={'shape': output_shape}, files={'file': byte_stream})
+        # --- 테스트용 임시 코드 ---
+        # 받는 쪽에서 np.frombuffer()로 복원했을 때 크기가 반토막나길래
+        # 전송 전에는 복원이 가능한지 확인하는 부분.
+        # 돌려보니까 여기서도 에러 발생 => 전송 자체는 잘 되고있음...
+        reconstruct = np.frombuffer(output_bytes, dtype=np.float32)
+        np.reshape(reconstruct, output_shape)
+        print('reconstruct validation successful', flush=True)
+
+        # 다음 파트를 담당하는 pod에 나머지 연산 요청.
+        # multipart post 보내기: https://stackoverflow.com/questions/35939761/how-to-send-json-as-part-of-multipart-post-request#comment59538358_35939761
+        shape_json = json.dumps({'shape': output_shape})
+        files = {
+            'shape_json': ('shape_json', shape_json, 'application/json'),
+            'output_bytes': ('output_bytes', output_bytes, 'application/octet-stream')
+        }
+        print('forwarding request to {} with intermediate output shape: {}, type: {}...'.format(next_model_addr, output_shape, output.type()), flush=True)
+        res = requests.post('http://{}/predict'.format(next_model_addr), files=files)
 
         # response forwarding: https://stackoverflow.com/questions/6656363/proxying-to-another-web-service-with-flask
         #region exlcude some keys in :res response

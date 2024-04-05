@@ -13,12 +13,22 @@ docker run -P --rm --gpus all splitting
 
 // 모델의 레이어 범위 및 다음 서버 주소 지정.
 // 마지막 파트에는 "nextaddr=None" 넘겨주기.
-curl -G -d "start=0" -d "end=10" -d "nextaddr=host.docker.internal:5555" GET http://localhost:32769/configure
+curl -G -d "start=0" -d "end=10" -d "nextaddr=host.docker.internal:5555" http://localhost:32769/configure
 
 // docker desktop 등으로 어느 포트가 8080으로 매핑되었는지 확인하고 요청 보내기
+// curl -X POST -F "file=@파일경로.jpg" http://localhost:포트번호/predict
 // ex) 호스트 32768 => 컨테이너 8080이면 http://localhost:32768/predict로 요청
-curl -X POST -F "file=@파일경로.jpg" http://localhost:포트번호/predict
+curl -X POST -F "file=@./20231020_01110305000006_L00.jpg" http://localhost:32768/predict
+```
+### 모델을 둘로 나누는 예시
+```
+docker build -t splitting .
+docker run -d -p 33333:8080 --rm --gpus all splitting
+docker run -d -p 44444:8080 --rm --gpus all splitting
 
+curl -G -d "start=0" -d "end=10" -d "nextaddr=host.docker.internal:44444" http://localhost:33333/configure
+curl -G -d "start=10" -d "end=21" -d "nextaddr=None" http://localhost:44444/configure
+curl -X POST -F "file=@./20231020_01110305000006_L00.jpg" http://localhost:33333/predict
 ```
 
 ## 참고사항
