@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: splitting1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: splitting1
+  template:
+    metadata:
+      labels:
+        app: splitting1
+    spec:
+      containers:
+      - name: splitting1
+        image: ownfos/splitting
+        ports:
+        - containerPort: 5000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: splitting2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: splitting2
+  template:
+    metadata:
+      labels:
+        app: splitting2
+    spec:
+      containers:
+      - name: splitting2
+        image: ownfos/splitting
+        ports:
+        - containerPort: 5000
