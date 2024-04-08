@@ -35,11 +35,6 @@ curl -G -d "start=10" -d "end=21" -d "nextaddr=None" http://localhost:44444/conf
 curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost:33333/predict
 ```
 
-## 참고사항
-
-- GPU 없는 환경에서도 돌아갈 것 같긴 한데 아직 확인은 못해봤음
-- 테스트한 환경: Windows11 + WSL2 + Docker
-
 ## 동작 과정
 
 1. 이미지를 빌드할 때 splitter.py를 실행해서 pretrained resnet 모델을 다운받고  
