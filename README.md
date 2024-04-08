@@ -1,9 +1,14 @@
 # 목표
 
+### 완료된 목표
 - pytorch로 resnet50 모델을 여러 파트로 나누고 실행해보기
 - 분할했을 때 원본과 동일한 결과를 내는 것 확인하기
 - 웹서버로 감싸 레이어 범위 및 다음 파트 담당하는 서버 ip주소 지정하기
-- 여러 서버로 분할된 환경에서 inference 잘 진행되는지 확인하기 <-- 텐서 차원이랑 텐서 데이터를 동시에 보내는 곳에서 실패한 상태
+- 여러 서버로 분할된 환경에서 inference 잘 진행되는지 확인하기
+
+### TODO
+- 쿠버네티스 서비스의 cluster IP로 통신하기
+- 로드밸런서 만들기
 
 ## 로컬에서 실행
 
@@ -35,7 +40,7 @@ curl -G -d "start=10" -d "end=21" -d "nextaddr=None" http://localhost:44444/conf
 curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost:33333/predict
 ```
 
-## 동작 과정
+## test.py 동작 과정
 
 1. 이미지를 빌드할 때 splitter.py를 실행해서 pretrained resnet 모델을 다운받고  
 이를 둘로 쪼갠 head와 tail을 각각 head.pth, tail.pth 파일에 저장함.
@@ -44,6 +49,17 @@ curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost
 4. 누군가 제공해준 1000개 샘플 데이터를 넣어보고 정확도를 출력함.
    - 원본과 split model이 같은 결과를 내는지 assert()로 체크하기 때문에  
    실행이 정상적으로 끝났다면 정확도 문제 x
+
+### 주의사항
+- 메모리 요구량이 상당해서 실행하다가 메모리 부족으로 실패할 수 있음
+
+## Wrapper 웹서버 동작 과정
+1. 서버를 실행한 뒤 /configure 엔드포인트에 start, end, nextaddr 세 개의 파라미터로 모델 설정
+2. 요청이 들어오면 files에 담긴 바이너리 데이터를 이미지로 변환
+3. 자신이 담당하는 파트를 계산한 뒤, 출력 텐서를 바이너리 형태로 다음 파트를 담당하는 서버에게 전송
+   - GPU 텐서 -> CPU 텐서 -> numpy array -> 바이너리
+4. 다음 파트를 담당하는 서버는 이를 다시 텐서로 복원
+5. 최종적으로 모든 연산을 마치면 prediction class index를 json 형태로 반환
 
 ## 사용한 테스트 데이터
 
