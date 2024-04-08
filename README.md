@@ -1,4 +1,6 @@
-# 목표
+# Deploying Splitted Deep Learning Model to Kubernetes Cluster
+
+## 목표
 
 ### 완료된 목표
 
@@ -12,35 +14,52 @@
 - 쿠버네티스 서비스의 cluster IP로 통신하기
 - 로드밸런서 만들기
 
-## 로컬에서 실행
+## 실행
+
+### 로컬
+
+모델 서버를 두 개의 도커 컨테이너로 실행
 
 ```sh
-// 이미지 빌드 및 컨테이너 실행 (gpu 사용, 포트는 어디로 매핑될지 모름...)
-// pytorch 이미지가 거의 7GB라 첫 빌드는 오래걸림
-docker build -t splitting .
-docker run -P --rm --gpus all splitting
-
-// 모델의 레이어 범위 및 다음 서버 주소 지정.
-// 마지막 파트에는 "nextaddr=None" 넘겨주기.
-curl -G -d "start=0" -d "end=10" -d "nextaddr=host.docker.internal:5555" http://localhost:32769/configure
-
-// docker desktop 등으로 어느 포트가 8080으로 매핑되었는지 확인하고 요청 보내기
-// curl -X POST -F "file=@파일경로.jpg" http://localhost:포트번호/predict
-// ex) 호스트 32768 => 컨테이너 8080이면 http://localhost:32768/predict로 요청
-curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost:32768/predict
-```
-
-### 모델을 둘로 나누는 예시
-
-```sh
+# 이미지 빌드 및 컨테이너 실행 (gpu 사용, 포트는 어디로 매핑될지 모름...)
+# pytorch 이미지가 거의 7GB라 첫 빌드는 오래걸림
 docker build -t splitting .
 docker run -d -p 33333:8080 --rm --gpus all splitting
 docker run -d -p 44444:8080 --rm --gpus all splitting
+```
 
+테스트
+
+```sh
+# 모델의 레이어 범위 및 다음 서버 주소 지정.
 curl -G -d "start=0" -d "end=10" -d "nextaddr=host.docker.internal:44444" http://localhost:33333/configure
+
+# 마지막 파트에는 "nextaddr=None" 넘겨주기.
 curl -G -d "start=10" -d "end=21" -d "nextaddr=None" http://localhost:44444/configure
+
+# Model inference
 curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost:33333/predict
 ```
+
+### 쿠버네티스 환경
+
+도커 빌드 및 이미지 푸시
+
+```sh
+docker build -t ownfos/splitting . # <docker-hub-id>/<image>
+docker push ownfos/splitting
+```
+
+쿠버네티스 클러스터에 Deployment 배포 및 NodePort Service 생성
+
+```sh
+kubectl apply -f deploy/splitting-deployment.yaml
+kubectl apply -f deploy/splitting-service.yaml
+```
+
+테스트
+
+<!-- TODO -->
 
 ## test.py 동작 과정
 
