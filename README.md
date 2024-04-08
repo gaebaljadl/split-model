@@ -1,18 +1,20 @@
 # 목표
 
 ### 완료된 목표
+
 - pytorch로 resnet50 모델을 여러 파트로 나누고 실행해보기
 - 분할했을 때 원본과 동일한 결과를 내는 것 확인하기
 - 웹서버로 감싸 레이어 범위 및 다음 파트 담당하는 서버 ip주소 지정하기
 - 여러 서버로 분할된 환경에서 inference 잘 진행되는지 확인하기
 
 ### TODO
+
 - 쿠버네티스 서비스의 cluster IP로 통신하기
 - 로드밸런서 만들기
 
 ## 로컬에서 실행
 
-```
+```sh
 // 이미지 빌드 및 컨테이너 실행 (gpu 사용, 포트는 어디로 매핑될지 모름...)
 // pytorch 이미지가 거의 7GB라 첫 빌드는 오래걸림
 docker build -t splitting .
@@ -30,7 +32,7 @@ curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost
 
 ### 모델을 둘로 나누는 예시
 
-```
+```sh
 docker build -t splitting .
 docker run -d -p 33333:8080 --rm --gpus all splitting
 docker run -d -p 44444:8080 --rm --gpus all splitting
@@ -51,9 +53,11 @@ curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost
    실행이 정상적으로 끝났다면 정확도 문제 x
 
 ### 주의사항
+
 - 메모리 요구량이 상당해서 실행하다가 메모리 부족으로 실패할 수 있음
 
 ## Wrapper 웹서버 동작 과정
+
 1. 서버를 실행한 뒤 /configure 엔드포인트에 start, end, nextaddr 세 개의 파라미터로 모델 설정
 2. 요청이 들어오면 files에 담긴 바이너리 데이터를 이미지로 변환
 3. 자신이 담당하는 파트를 계산한 뒤, 출력 텐서를 바이너리 형태로 다음 파트를 담당하는 서버에게 전송
