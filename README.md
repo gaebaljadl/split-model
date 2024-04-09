@@ -37,7 +37,7 @@ curl -G -d "start=0" -d "end=10" -d "nextaddr=host.docker.internal:44444" http:/
 # 마지막 파트에는 "nextaddr=None" 넘겨주기.
 curl -G -d "start=10" -d "end=21" -d "nextaddr=None" http://localhost:44444/configure
 
-# Model inference
+# Model inference ({"predicted_class":436}이라고 나오면 성공)
 curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost:33333/predict
 ```
 
