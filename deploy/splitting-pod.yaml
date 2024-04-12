@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: splitting1
+  labels:
+    app: splitting1
+spec:
+  containers:
+  - name: splitting1
+    image: ownfos/splitting
+    ports:
+    - containerPort: 5000
+    readinessProbe: null
+    livenessProbe: null
+    startupProbe: null
+    resources:
+      limits:
+        memory: "1280Mi"
+        cpu: "500m"
+      requests:
+        memory: "640Mi"
+        cpu: "250m"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: splitting2
+  labels:
+    app: splitting2
+spec:
+  containers:
+  - name: splitting2
+    image: ownfos/splitting
+    ports:
+    - containerPort: 5000
+    readinessProbe: null
+    livenessProbe: null
+    startupProbe: null
+    resources:
+      limits:
+        memory: "1280Mi"
+        cpu: "500m"
+      requests:
+        memory: "640Mi"
+        cpu: "250m"
