@@ -69,7 +69,8 @@ kubectl describe pod splitting1
 kubectl describe pod splitting2
 ```
 ![실행 결과](screenshots/describepod.png)
-AWS의 경우 위 사진처럼 내부 IP가 표시되므로 꼭 외부 IP가 무엇인지 확인해야 함
+
+* AWS의 경우 위 사진처럼 내부 IP가 표시되므로 꼭 외부 IP가 무엇인지 확인해야 함
 * 현재 서비스의 domain name으로 접속하지 못하는 문제를 겪고 있어 외부 IP로만 가능한 상황...
 * 만약 클러스터 세팅이 완벽히 끝났다면 서비스의 클러스터 IP를 사용해도 될 것으로 기대됨
 
