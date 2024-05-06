@@ -43,21 +43,51 @@ curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://localhost
 
 ### 쿠버네티스 환경
 
-도커 빌드 및 이미지 푸시
+1. 도커 빌드 및 이미지 푸시 (현재 docker hub에 업로드된 상태라 스킵하면 됨)
 
 ```sh
 docker build -t ownfos/splitting . # <docker-hub-id>/<image>
 docker push ownfos/splitting
 ```
 
-쿠버네티스 클러스터에 Deployment 배포 및 NodePort Service 생성
+2. 쿠버네티스 클러스터에 Deployment 배포 및 NodePort Service 생성
 
 ```sh
 kubectl apply -f deploy/splitting-deployment.yaml
 kubectl apply -f deploy/splitting-service.yaml
 ```
 
-테스트
+3. NodePort Service의 포트 번호 확인
+```sh
+kubectl get services
+```
+![실행 결과](screenshots/getservices.png)
+
+4. pod가 배포된 노드 이름을 보고 대응되는 외부 IP 확인
+```sh
+kubectl describe pod splitting1
+kubectl describe pod splitting2
+```
+![실행 결과](screenshots/describepod.png)
+AWS의 경우 위 사진처럼 내부 IP가 표시되므로 꼭 외부 IP가 무엇인지 확인해야 함
+* 현재 서비스의 domain name으로 접속하지 못하는 문제를 겪고 있어 외부 IP로만 가능한 상황...
+* 만약 클러스터 세팅이 완벽히 끝났다면 서비스의 클러스터 IP를 사용해도 될 것으로 기대됨
+
+5. 테스트
+```sh
+# 용어 정리:
+# splitting1에 접근하는 주소 addr1 = [splitting1의 노드 외부 IP]:[splitting1-service의 포트]
+# splitting2에 접근하는 주소 addr2 = [splitting2의 노드 외부 IP]:[splitting2-service의 포트]
+
+# 모델의 레이어 범위 및 다음 서버 주소 지정.
+curl -G -d "start=0" -d "end=10" -d "nextaddr=addr2" http://addr1/configure
+
+# 마지막 파트에는 "nextaddr=None" 넘겨주기.
+curl -G -d "start=10" -d "end=21" -d "nextaddr=None" http://addr2/configure
+
+# Model inference ({"predicted_class":436}이라고 나오면 성공)
+curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://addr1/predict
+```
 
 <!-- TODO -->
 

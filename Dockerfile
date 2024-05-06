@@ -1,6 +1,6 @@
 FROM pytorch/pytorch
 
-RUN apt-get update && apt-get install -y git
+RUN apt-get update && apt-get install -y git iputils-ping net-tools
 
 # pytorch 이미지에 Flask는 없으니 설치
 RUN pip install Flask
