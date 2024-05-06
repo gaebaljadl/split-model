@@ -20,6 +20,13 @@ spec:
         readinessProbe: null
         livenessProbe: null
         startupProbe: null
+        resources:
+          limits:
+            memory: "1280Mi"
+            cpu: "500m"
+          requests:
+            memory: "640Mi"
+            cpu: "250m"
 
 ---
 apiVersion: apps/v1
@@ -44,3 +51,10 @@ spec:
         readinessProbe: null
         livenessProbe: null
         startupProbe: null
+        resources:
+          limits:
+            memory: "1280Mi"
+            cpu: "500m"
+          requests:
+            memory: "640Mi"
+            cpu: "250m"
