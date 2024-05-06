@@ -17,6 +17,9 @@ spec:
         image: ownfos/splitting
         ports:
         - containerPort: 5000
+        readinessProbe: null
+        livenessProbe: null
+        startupProbe: null
 
 ---
 apiVersion: apps/v1
@@ -38,3 +41,6 @@ spec:
         image: ownfos/splitting
         ports:
         - containerPort: 5000
+        readinessProbe: null
+        livenessProbe: null
+        startupProbe: null
