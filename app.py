@@ -8,6 +8,20 @@ import numpy as np
 import json
 from splitter import *
 
+# Overview:
+# app.py는 원본 모델의 전체 또는 일부 레이어에 해당하는 연산을 처리하는 stateful 서버임.
+#
+# 서버는 두 개의 엔드포인트로 state 변경 및 인퍼런스 요청을 처리함
+# 1. /configure - GET 요청으로 처리할 레이어 범위 및 다음 서버를 지정
+# 2. /predict - POST로 수신한 이미지 파일 또는 텐서를 디코딩하고 자신이 담당하는 레이어 범위의 연산을 수행
+#
+# 모델의 분할은 다음과 같이 이뤄짐
+# 1. 원본 모델을 쪼갤 수 있는 만큼 쪼개서 레이어 리스트로 변환 (module_list 변수)
+# 2. 처리할 레이어 범위를 갖고 torch.nn.Sequential으로 partial model을 생성 (split_model 변수)
+# 3. /configure 요청이 들어올 때마다 module_list를 사용해 새로운 모델을 만들고 split_model에 저장
+#
+# 예를 들어, 전체 모델을 L1, L2, L3로 나누었다면 데이터의 흐름은 다음과 같음
+# 유저 -> L1 -> L2 -> L3 (여기서 인퍼런스 완료, response 전송 시작) -> L2 -> L1 -> 유저
 app = Flask(__name__)
 
 # GPU 사용 여부 확인
@@ -44,6 +58,11 @@ def predict_image(input) -> torch.Tensor:
     return output
 
 
+# 서버에서 담당할 레이어의 범위와 다음 서버의 주소를 설정하는 엔드포인트.
+# 쿼리에 세 가지 값을 넣어줘야 한다
+# 1. start - 레이어 범위의 시작 인덱스
+# 2. end - 레이어 범위의 마지막 인덱스 + 1 ([start, end)라는 half open interval 생각하면 됨)
+# 3. nextaddr - 다음 서버의 주소. 이 서버가 모델의 마지막 레이어를 포함하는 경우 주소 대신 None을 사용.
 @app.route('/configure', methods=['GET'])
 def configure():
     layer_start = request.args.get('start', type = int)
@@ -61,6 +80,14 @@ def configure():
     return 'layer_start: {}, layer_end: {}, next_model_addr: {}'.format(layer_start, layer_end, next_model_addr)
 
 
+# 인퍼런스 요청을 처리하는 엔드포인트.
+# 입력과 출력에서 각각 두 가지 경우가 존재한다
+# 1. 입력
+# case 1) 유저가 보낸 이미지를 받은 경우 이미지 전처리를 수행
+# case 2) 이전 파트를 담당하는 서버가 보낸 텐서를 받은 경우 전처리 없이 바로 torch.Tensor로 복원
+# 2. 출력
+# case 1) 전체 모델의 연산이 끝난 경우 확률이 가장 높은 클래스의 인덱스를 json 형태로 반환
+# case 2) 모델의 일부분만 계산된 경우 다음 서버로 자신의 연산 결과 텐서를 전송하고, 받은 결과물을 요청한 곳에 forward
 @app.route('/predict', methods=['POST'])
 def predict():
     if is_request_from_client:
@@ -103,14 +130,6 @@ def predict():
         #       np.frombuffer()는 디폴트 타입이 np.float64라서 반드시 타입을 명시해야 함!!!
         output_shape = list(output.shape)
         output_bytes = output.numpy().tobytes()
-
-        # --- 테스트용 임시 코드 ---
-        # 받는 쪽에서 np.frombuffer()로 복원했을 때 크기가 반토막나길래
-        # 전송 전에는 복원이 가능한지 확인하는 부분.
-        # 돌려보니까 여기서도 에러 발생 => 전송 자체는 잘 되고있음...
-        reconstruct = np.frombuffer(output_bytes, dtype=np.float32)
-        np.reshape(reconstruct, output_shape)
-        print('reconstruct validation successful', flush=True)
 
         # 다음 파트를 담당하는 pod에 나머지 연산 요청.
         # multipart post 보내기: https://stackoverflow.com/questions/35939761/how-to-send-json-as-part-of-multipart-post-request#comment59538358_35939761
