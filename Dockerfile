@@ -15,6 +15,7 @@ COPY ./splitter.py /test/splitter.py
 COPY ./sample_data.py /test/sample_data.py
 
 # 모델 로딩하는 코드만 먼저 돌려서 이미지 빌드할 때 pretrained weight 다운받아놓기
+# test.py에서 사용하는 head.pth와 tail.pth도 여기서 생성된다
 RUN cd /test; python splitter.py
 
 # 여기는 수정이 자주 일어나니 나중에 복사

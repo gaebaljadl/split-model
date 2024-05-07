@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # split_layer_index = len(module_list) // 2
     # head, tail = splitter.split_module_list(module_list, split_layer_index)
 
-    # Load splitted models
+    # Load splitted models (created by running splitter.py)
     head = torch.load("./head.pth").to(device)
     tail = torch.load("./tail.pth").to(device)
 
