@@ -61,12 +61,14 @@ kubectl apply -f deploy/splitting-service.yaml
 ```sh
 kubectl get services
 ```
+![클러스터 IP 확인](screenshots/getclusterip.png)
 
 4. 테스트
 ```sh
 # 용어 정리:
 # splitting1에 접근하는 주소 addr1 = splitting1-service의 클러스터 IP
 # splitting2에 접근하는 주소 addr2 = splitting2-service의 클러스터 IP
+# * 예시로 주어진 service들은 기본 포트인 80을 사용하기 때문에 포트 번호는 생략 가능
 
 # 모델의 레이어 범위 및 다음 서버 주소 지정.
 curl -G -d "start=0" -d "end=10" -d "nextaddr=addr2" http://addr1/configure
