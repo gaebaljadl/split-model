@@ -57,28 +57,16 @@ kubectl apply -f deploy/splitting-deployment.yaml
 kubectl apply -f deploy/splitting-service.yaml
 ```
 
-3. NodePort Service의 포트 번호 확인
+3. NodePort Service의 클러스터 IP 확인
 ```sh
 kubectl get services
 ```
-![실행 결과](screenshots/getservices.png)
 
-4. pod가 배포된 노드 이름을 보고 대응되는 외부 IP 확인
-```sh
-kubectl describe pod splitting1
-kubectl describe pod splitting2
-```
-![실행 결과](screenshots/describepod.png)
-
-* AWS의 경우 위 사진처럼 내부 IP가 표시되므로 꼭 외부 IP가 무엇인지 확인해야 함
-* 현재 서비스의 domain name으로 접속하지 못하는 문제를 겪고 있어 외부 IP로만 가능한 상황...
-* 만약 클러스터 세팅이 완벽히 끝났다면 서비스의 클러스터 IP를 사용해도 될 것으로 기대됨
-
-5. 테스트
+4. 테스트
 ```sh
 # 용어 정리:
-# splitting1에 접근하는 주소 addr1 = [splitting1의 노드 외부 IP]:[splitting1-service의 포트]
-# splitting2에 접근하는 주소 addr2 = [splitting2의 노드 외부 IP]:[splitting2-service의 포트]
+# splitting1에 접근하는 주소 addr1 = splitting1-service의 클러스터 IP
+# splitting2에 접근하는 주소 addr2 = splitting2-service의 클러스터 IP
 
 # 모델의 레이어 범위 및 다음 서버 주소 지정.
 curl -G -d "start=0" -d "end=10" -d "nextaddr=addr2" http://addr1/configure
