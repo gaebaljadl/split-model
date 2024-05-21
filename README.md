@@ -13,6 +13,8 @@
 ### TODO
 
 - 로드밸런서 만들기
+- deploy/splitting-configmap에 있는 nextaddr이 올바른 service domain name인지 확인
+- 실제 클러스터에서 configmap으로 환경변수 잘 세팅되는지 확인
 
 ## 실행
 
@@ -53,6 +55,7 @@ docker push ownfos/splitting
 2. 쿠버네티스 클러스터에 Deployment 배포 및 NodePort Service 생성
 
 ```sh
+# kubectl apply -f deploy/splitting-configmap.yaml <-- 만들어두긴 했는데 지금 AWS 인스턴스 생성 권한이 없다면서 실패하길래 테스트는 못해봄
 kubectl apply -f deploy/splitting-deployment.yaml
 kubectl apply -f deploy/splitting-service.yaml
 ```

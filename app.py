@@ -3,6 +3,7 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 import io
+import os
 import requests
 import numpy as np
 import json
@@ -58,6 +59,16 @@ def predict_image(input) -> torch.Tensor:
     return output
 
 
+# k8s 환경에서 configmap과 함께 배포된 경우
+# 환경 변수에서 /configure에 필요한 정보를 탐색함.
+# 만약 정보가 없었다면 기본값을 사용함.
+def try_apply_k8s_configmap():
+    layer_start = int(os.environ.get('LAYER_START', '0'))
+    layer_end = int(os.environ.get('LAYER_END', '21'))
+    nextaddr = os.environ.get('NEXTADDR', 'None')
+    configure_model(layer_start, layer_end, nextaddr)
+
+
 # 서버에서 담당할 레이어의 범위와 다음 서버의 주소를 설정하는 엔드포인트.
 # 쿼리에 세 가지 값을 넣어줘야 한다
 # 1. start - 레이어 범위의 시작 인덱스
@@ -67,17 +78,23 @@ def predict_image(input) -> torch.Tensor:
 def configure():
     layer_start = request.args.get('start', type = int)
     layer_end = request.args.get('end', type = int)
+    nextaddr = request.args.get('nextaddr', type=str)
+    configure_model(layer_start, layer_end, nextaddr)
+    return 'layer_start: {}, layer_end: {}, next_model_addr: {}'.format(layer_start, layer_end, nextaddr)
 
+
+def configure_model(layer_start: int, layer_end: int, nextaddr: str):
     global is_request_from_client
     is_request_from_client = layer_start == 0
 
     global next_model_addr
-    next_model_addr = request.args.get('nextaddr', type=str)
+    next_model_addr = nextaddr
 
     global split_model
     split_model = torch.nn.Sequential(*module_list[layer_start:layer_end]).to(device)
     split_model.eval()
-    return 'layer_start: {}, layer_end: {}, next_model_addr: {}'.format(layer_start, layer_end, next_model_addr)
+    
+    print('configuring model - layer_start: {}, layer_end: {}, next_model_addr: {}'.format(layer_start, layer_end, nextaddr))
 
 
 # 인퍼런스 요청을 처리하는 엔드포인트.
@@ -155,4 +172,5 @@ def predict():
         
 
 if __name__ == '__main__':
+    try_apply_k8s_configmap()
     app.run(host='0.0.0.0', port=8080)

@@ -15,6 +15,22 @@ spec:
       containers:
       - name: splitting1
         image: ownfos/splitting
+        env:
+          - name: LAYER_START
+            valueFrom:
+              configMapKeyRef:
+                name: splitting1-config
+                key: layer_start
+          - name: LAYER_END
+            valueFrom:
+              configMapKeyRef:
+                name: splitting1-config
+                key: layer_end
+          - name: NEXTADDR
+            valueFrom:
+              configMapKeyRef:
+                name: splitting1-config
+                key: nextaddr
         ports:
         - containerPort: 5000
         readinessProbe: null
@@ -46,6 +62,22 @@ spec:
       containers:
       - name: splitting2
         image: ownfos/splitting
+        env:
+          - name: LAYER_START
+            valueFrom:
+              configMapKeyRef:
+                name: splitting2-config
+                key: layer_start
+          - name: LAYER_END
+            valueFrom:
+              configMapKeyRef:
+                name: splitting2-config
+                key: layer_end
+          - name: NEXTADDR
+            valueFrom:
+              configMapKeyRef:
+                name: splitting2-config
+                key: nextaddr
         ports:
         - containerPort: 5000
         readinessProbe: null
