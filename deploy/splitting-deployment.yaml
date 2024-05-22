@@ -19,17 +19,17 @@ spec:
           - name: LAYER_START
             valueFrom:
               configMapKeyRef:
-                name: splitting1-config
+                name: splitting1-configmap
                 key: layer_start
           - name: LAYER_END
             valueFrom:
               configMapKeyRef:
-                name: splitting1-config
+                name: splitting1-configmap
                 key: layer_end
           - name: NEXTADDR
             valueFrom:
               configMapKeyRef:
-                name: splitting1-config
+                name: splitting1-configmap
                 key: nextaddr
         ports:
         - containerPort: 5000
@@ -66,17 +66,17 @@ spec:
           - name: LAYER_START
             valueFrom:
               configMapKeyRef:
-                name: splitting2-config
+                name: splitting2-configmap
                 key: layer_start
           - name: LAYER_END
             valueFrom:
               configMapKeyRef:
-                name: splitting2-config
+                name: splitting2-configmap
                 key: layer_end
           - name: NEXTADDR
             valueFrom:
               configMapKeyRef:
-                name: splitting2-config
+                name: splitting2-configmap
                 key: nextaddr
         ports:
         - containerPort: 5000
