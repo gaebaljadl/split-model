@@ -9,12 +9,11 @@
 - 웹서버로 감싸 레이어 범위 및 다음 파트 담당하는 서버 ip주소 지정하기
 - 여러 서버로 분할된 환경에서 inference 잘 진행되는지 확인하기
 - 쿠버네티스 서비스의 cluster IP로 통신하기
+- ConfigMap으로 /configure 엔드포인트 대체하기
 
 ### TODO
 
 - 로드밸런서 만들기
-- deploy/splitting-configmap에 있는 nextaddr이 올바른 service domain name인지 확인
-- 실제 클러스터에서 configmap으로 환경변수 잘 세팅되는지 확인
 
 ## 실행
 
@@ -55,7 +54,7 @@ docker push ownfos/splitting
 2. 쿠버네티스 클러스터에 Deployment 배포 및 NodePort Service 생성
 
 ```sh
-# kubectl apply -f deploy/splitting-configmap.yaml <-- 만들어두긴 했는데 지금 AWS 인스턴스 생성 권한이 없다면서 실패하길래 테스트는 못해봄
+kubectl apply -f deploy/splitting-configmap.yaml
 kubectl apply -f deploy/splitting-deployment.yaml
 kubectl apply -f deploy/splitting-service.yaml
 ```
@@ -67,23 +66,35 @@ kubectl get services
 ![클러스터 IP 확인](screenshots/getclusterip.png)
 
 4. 테스트
-```sh
-# 용어 정리:
-# splitting1에 접근하는 주소 addr1 = splitting1-service의 클러스터 IP
-# splitting2에 접근하는 주소 addr2 = splitting2-service의 클러스터 IP
-# * 예시로 주어진 service들은 기본 포트인 80을 사용하기 때문에 포트 번호는 생략 가능
+   1. ConfigMap을 사용하지 않은 경우 수동으로 /configure 엔드포인트에 설정값 전달  
+      ```sh
+      # 용어 정리:
+      # splitting1에 접근하는 주소 addr1 = splitting1-service의 클러스터 IP
+      # splitting2에 접근하는 주소 addr2 = splitting2-service의 클러스터 IP
+      # * 예시로 주어진 service들은 기본 포트인 80을 사용하기 때문에 포트 번호는 생략 가능
 
-# 모델의 레이어 범위 및 다음 서버 주소 지정.
-curl -G -d "start=0" -d "end=10" -d "nextaddr=addr2" http://addr1/configure
+      # 모델의 레이어 범위 및 다음 서버 주소 지정.
+      curl -G -d "start=0" -d "end=10" -d "nextaddr=addr2" http://addr1/configure
 
-# 마지막 파트에는 "nextaddr=None" 넘겨주기.
-curl -G -d "start=10" -d "end=21" -d "nextaddr=None" http://addr2/configure
+      # 마지막 파트에는 "nextaddr=None" 넘겨주기.
+      curl -G -d "start=10" -d "end=21" -d "nextaddr=None" http://addr2/configure
+      ```
 
-# Model inference ({"predicted_class":436}이라고 나오면 성공)
-curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://addr1/predict
-```
+   2. 인퍼런스 요청
+      ```sh
+      # Model inference ({"predicted_class":436}이라고 나오면 성공)
+      curl -X POST -F "file=@./input/20231020_01110305000006_L00.jpg" http://addr1/predict
+      ```
 
 <!-- TODO -->
+
+#### [참고] 서버는 두 가지 방법으로 설정 가능
+1. 서버를 실행한 뒤 /configure 엔드포인트 사용
+   - 로컬 환경이나 도커처럼 IP와 포트를 확인할 수 있는 경우에 가능
+   
+2. 환경변수 LAYER_START, LAYER_END, NEXTADDR 설정하고 서버 실행
+   - k8s 클러스터처럼 특정 포트에 접근하기가 어려운 경우 사용
+   - ConfigMap을 사용하면 pod 생성 시 환경변수를 주입할 수 있음
 
 ## test.py 동작 과정
 
