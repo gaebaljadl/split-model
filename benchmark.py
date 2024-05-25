@@ -60,13 +60,19 @@ if __name__ == "__main__":
                 )
             )
             print(
-                f""" (0, {first}) : {first_check_point_time - start_time}
-({first}, {second}) : {second_check_point_time - first_check_point_time}
-({second}, {third}) : {third_check_point_time - second_check_point_time}
-({third}, 50) : {fourth_check_point_time - third_check_point_time}
+                f"""time (0, {first}) : {first_check_point_time - start_time}
+time ({first}, {second}) : {second_check_point_time - first_check_point_time}
+time ({second}, {third}) : {third_check_point_time - second_check_point_time}
+time ({third}, 50) : {fourth_check_point_time - third_check_point_time}
+result : {max_value}
 """
             )
-            print(max_value)
 
-    highest_throughput = max(times, key=lambda x: sum(x[1]))
-    print(highest_throughput)
+    max_throughput = max(times, key=lambda x: sum(x[1]))
+    print(
+        f"""max throughput
+split points : {max_throughput[0]}
+time for each section : {max_throughput[1]}
+total time : {max_throughput[2]}
+"""
+    )
