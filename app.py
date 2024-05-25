@@ -1,3 +1,4 @@
+import time
 from flask import Flask, request, jsonify, Response
 import torch
 import torchvision.transforms as transforms
@@ -107,6 +108,8 @@ def configure_model(layer_start: int, layer_end: int, nextaddr: str):
 # case 2) 모델의 일부분만 계산된 경우 다음 서버로 자신의 연산 결과 텐서를 전송하고, 받은 결과물을 요청한 곳에 forward
 @app.route('/predict', methods=['POST'])
 def predict():
+    start_time = time.time()
+
     if is_request_from_client:
         # 변환 과정: 바이트 배열 -> 이미지 파일 -> 전처리 -> torch.Tensor
         file = request.files['file']
@@ -135,8 +138,16 @@ def predict():
         # 가장 큰 값의 인덱스 찾기
         max_index = output_list[0].index(max(output_list[0]))
 
+        # 시간 값
+        time_array = (
+            []
+            if is_request_from_client
+            else list(json.loads(request.files["time_json"].read()))
+            + [time.time() - start_time]
+        )
+
         # 결과 반환
-        return jsonify({'predicted_class': max_index}), 200
+        return jsonify({"predicted_class": max_index, "time": time_array}), 200
     # Case 2) 이번 파트는 일부분만 계산했고, 나머지 연산은 다음 파트로 넘어가야 함
     else:
         # torch.Tensor를 바이트로 변환하기.
@@ -150,10 +161,15 @@ def predict():
 
         # 다음 파트를 담당하는 pod에 나머지 연산 요청.
         # multipart post 보내기: https://stackoverflow.com/questions/35939761/how-to-send-json-as-part-of-multipart-post-request#comment59538358_35939761
-        shape_json = json.dumps({'shape': output_shape})
+        shape_json = json.dumps({"shape": output_shape})
+        time_json = json.dumps(
+            list(json.loads(request.files["time_json"].read()))
+            + [time.time() - start_time]
+        )
         files = {
-            'shape_json': ('shape_json', shape_json, 'application/json'),
-            'output_bytes': ('output_bytes', output_bytes, 'application/octet-stream')
+            "shape_json": ("shape_json", shape_json, "application/json"),
+            "output_bytes": ("output_bytes", output_bytes, "application/octet-stream"),
+            "time_json": ("time_json", time_json, "application/json"),
         }
         print('forwarding request to {} with intermediate output shape: {}, type: {}...'.format(next_model_addr, output_shape, output.type()), flush=True)
         res = requests.post('http://{}/predict'.format(next_model_addr), files=files)
