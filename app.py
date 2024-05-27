@@ -140,8 +140,8 @@ def predict():
 
         # 시간 값
         time_array = (
-            []
-            if is_request_from_client
+            [time.time() - start_time]
+            if is_request_from_client or "time_json" not in request.files.keys()
             else list(json.loads(request.files["time_json"].read()))
             + [time.time() - start_time]
         )
@@ -163,7 +163,9 @@ def predict():
         # multipart post 보내기: https://stackoverflow.com/questions/35939761/how-to-send-json-as-part-of-multipart-post-request#comment59538358_35939761
         shape_json = json.dumps({"shape": output_shape})
         time_json = json.dumps(
-            list(json.loads(request.files["time_json"].read()))
+            [time.time() - start_time]
+            if is_request_from_client or "time_json" not in request.files.keys()
+            else list(json.loads(request.files["time_json"].read()))
             + [time.time() - start_time]
         )
         files = {
